@@ -53,6 +53,12 @@ npm run test:e2e    # e2e (Playwright) — signup → create task → mark done 
 
 `test:e2e` starts its own dev server automatically if one isn't already running.
 
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, unit tests, build, and the e2e suite against a Postgres service container on every push/PR — fully self-contained, no secrets required.
+
+## A few extra touches
+
+Beyond the core brief: light/dark theme toggle, keyboard shortcuts (`n` for a new task, `/` to jump to quick add), loading skeletons on filter changes, and empty states that distinguish "no tasks yet" from "no tasks match these filters."
+
 ## Project structure
 
 ```

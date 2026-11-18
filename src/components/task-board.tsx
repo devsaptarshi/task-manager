@@ -10,9 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { QuickAdd } from "@/components/quick-add";
+import { QuickAdd, QUICK_ADD_INPUT_ID } from "@/components/quick-add";
 import { TaskItem } from "@/components/task-item";
 import { TaskFormDialog, datetimeLocalToIso, type TaskFormValues } from "@/components/task-form-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, TaskPriority, TaskStatus } from "@/lib/types";
 import type { QuickAddTask } from "@/lib/validation";
 
@@ -50,20 +51,28 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("ALL");
   const [sort, setSort] = useState<SortKey>("createdAt");
 
+  const [isLoading, setIsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [quickAddPreview, setQuickAddPreview] = useState<QuickAddTask | null>(null);
 
+  const filtersActive = statusFilter !== "ALL" || priorityFilter !== "ALL";
+
   const refetch = useCallback(async () => {
+    setIsLoading(true);
     const params = new URLSearchParams();
     if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (priorityFilter !== "ALL") params.set("priority", priorityFilter);
     params.set("sort", sort);
 
-    const res = await fetch(`/api/tasks?${params.toString()}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setTasks(data.tasks as Task[]);
+    try {
+      const res = await fetch(`/api/tasks?${params.toString()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setTasks(data.tasks as Task[]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [statusFilter, priorityFilter, sort]);
 
   useEffect(() => {
@@ -72,6 +81,27 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refetch();
   }, [refetch]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping || dialogOpen || quickAddPreview) return;
+
+      if (e.key === "n") {
+        e.preventDefault();
+        setEditingTask(null);
+        setDialogOpen(true);
+      } else if (e.key === "/") {
+        e.preventDefault();
+        document.getElementById(QUICK_ADD_INPUT_ID)?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dialogOpen, quickAddPreview]);
 
   function toApiPayload(values: TaskFormValues) {
     return {
@@ -205,24 +235,36 @@ export function TaskBoard({ initialTasks }: { initialTasks: Task[] }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        {tasks.length === 0 && (
+        {isLoading ? (
+          <>
+            <Skeleton className="h-[74px] w-full rounded-lg" />
+            <Skeleton className="h-[74px] w-full rounded-lg" />
+            <Skeleton className="h-[74px] w-full rounded-lg" />
+          </>
+        ) : tasks.length === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            No tasks yet — add one above.
+            {filtersActive ? "No tasks match these filters." : "No tasks yet — add one above."}
           </p>
+        ) : (
+          tasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onStatusChange={(status) => handleStatusChange(task, status)}
+              onEdit={() => {
+                setEditingTask(task);
+                setDialogOpen(true);
+              }}
+              onDelete={() => handleDelete(task.id)}
+            />
+          ))
         )}
-        {tasks.map((task) => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            onStatusChange={(status) => handleStatusChange(task, status)}
-            onEdit={() => {
-              setEditingTask(task);
-              setDialogOpen(true);
-            }}
-            onDelete={() => handleDelete(task.id)}
-          />
-        ))}
       </div>
+
+      <p className="text-center text-xs text-muted-foreground">
+        Press <kbd className="rounded border px-1 py-0.5 font-mono">n</kbd> for a new task,{" "}
+        <kbd className="rounded border px-1 py-0.5 font-mono">/</kbd> to jump to quick add.
+      </p>
 
       {/* Manual create/edit dialog */}
       <TaskFormDialog

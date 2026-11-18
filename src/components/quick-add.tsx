@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { QuickAddTask } from "@/lib/validation";
 
+export const QUICK_ADD_INPUT_ID = "quick-add-input";
+
 export function QuickAdd({ onParsed }: { onParsed: (parsed: QuickAddTask) => void }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export function QuickAdd({ onParsed }: { onParsed: (parsed: QuickAddTask) => voi
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
       <Input
+        id={QUICK_ADD_INPUT_ID}
         placeholder={'Try "Call the dentist tomorrow 3pm, high priority"'}
         value={text}
         onChange={(e) => setText(e.target.value)}

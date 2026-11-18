@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function TasksLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -13,6 +14,7 @@ export default async function TasksLayout({ children }: { children: React.ReactN
           <span className="font-semibold">Task Manager</span>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user.email}</span>
+            <ThemeToggle />
             <LogoutButton />
           </div>
         </div>
