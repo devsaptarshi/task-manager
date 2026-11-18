@@ -2,14 +2,14 @@
 
 A simple task manager: sign up, create and manage your own tasks, and add tasks by typing a plain sentence — an AI quick-add parses it into a structured task.
 
-Built with Next.js (App Router) + TypeScript, PostgreSQL + Prisma, JWT auth with per-user data isolation, and a small Claude-powered "quick add" feature. See [`PLAN.md`](./PLAN.md) for the reasoning behind these choices, and the [deliverables below](#assessment-deliverables) for what was deliberately left out.
+Built with Next.js (App Router) + TypeScript, PostgreSQL + Prisma, JWT auth with per-user data isolation, and a small AI-powered "quick add" feature that works with either Claude or OpenAI. See [`PLAN.md`](./PLAN.md) for the reasoning behind these choices, and the [deliverables below](#assessment-deliverables) for what was deliberately left out.
 
 ## Stack
 
 - **Framework:** Next.js 16 (App Router), TypeScript, Tailwind CSS + shadcn/ui
 - **Data:** PostgreSQL + Prisma ORM
 - **Auth:** Custom JWT in an httpOnly cookie, bcrypt password hashing, every task scoped to its owning user
-- **AI:** Anthropic Claude (`claude-opus-5-5`) with Zod-validated structured output, for the "quick add" feature
+- **AI:** provider-agnostic quick add — uses Anthropic Claude (`claude-opus-5-5`) if `ANTHROPIC_API_KEY` is set, otherwise OpenAI (`gpt-6-luna`) if `OPENAI_API_KEY` is set. Both go through the same Zod schema (`src/lib/validation.ts`), so the structured output is identical regardless of provider — see `src/lib/ai.ts`.
 - **Testing:** Vitest (unit) + Playwright (e2e)
 
 ## Running it locally
@@ -25,7 +25,8 @@ Built with Next.js (App Router) + TypeScript, PostgreSQL + Prisma, JWT auth with
    ```bash
    DATABASE_URL="postgresql://..."       # any Postgres connection string
    JWT_SECRET="..."                      # generate with: openssl rand -base64 32
-   ANTHROPIC_API_KEY=""                  # optional — only needed for the AI quick-add feature
+   ANTHROPIC_API_KEY=""                  # optional — either this or OPENAI_API_KEY enables quick-add
+   OPENAI_API_KEY=""                     # optional — used only if ANTHROPIC_API_KEY is unset
    ```
 
    The included `DATABASE_URL` points at a temporary database created with Prisma's `create-db` (good for ~24h). Claim it permanently at the `CLAIM_URL` in `.env`, or swap in your own Postgres connection string and re-run the migration step below.
@@ -79,7 +80,7 @@ e2e/                    Playwright tests
 
 1. **Next.js/Prisma/Postgres instead of classic MERN.** One deploy target, type-safe DB access end to end, and it matches the production stack this was built to demonstrate — MongoDB's schema flexibility isn't a win for a structured entity like a `Task`.
 2. **Per-user JWT auth with data isolation from day one**, even though the brief didn't require multi-user auth. Every task query is scoped to `userId` — the same access-control discipline that matters far more once an app has more than one user.
-3. **One small, Zod-validated Claude feature instead of a chatbot.** The AI quick-add does one thing (turn a sentence into a structured task) with a typed, verifiable output, rather than a general-purpose assistant — smaller surface area, easy to demo, and still shows real GenAI integration work.
+3. **One small, Zod-validated AI feature instead of a chatbot — and provider-agnostic.** The AI quick-add does one thing (turn a sentence into a structured task) with a typed, verifiable output, rather than a general-purpose assistant — smaller surface area, easy to demo. It runs on Claude or OpenAI against the same schema (whichever API key is set), which also demonstrates that the structured-output pattern is the actual skill, not lock-in to one vendor's SDK.
 
 ### What was deliberately not implemented
 
