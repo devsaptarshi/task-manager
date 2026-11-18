@@ -50,9 +50,12 @@ Built with Next.js (App Router) + TypeScript, PostgreSQL + Prisma, JWT auth with
 ```bash
 npm run test        # unit tests (Vitest) — validation schemas, password hashing, JWT round-trip
 npm run test:e2e    # e2e (Playwright) — signup → create task → mark done → log out/in; AI quick-add error path
+npm run eval        # accuracy eval for the AI quick-add parser (see eval/)
 ```
 
 `test:e2e` starts its own dev server automatically if one isn't already running.
+
+`npm run eval` calls the real `parseQuickAddTask()` — the same function the live route uses — against 13 hand-reviewed phrases (`eval/cases.ts`), grading priority/title/dueDate independently rather than one blended score, and writes a timestamped JSON + Markdown report to `eval/results/`. Needs `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` set locally. Latest run: **13/13 on all three fields.**
 
 GitHub Actions (`.github/workflows/ci.yml`) runs lint, unit tests, build, and the e2e suite against a Postgres service container on every push/PR — fully self-contained, no secrets required.
 
@@ -72,6 +75,7 @@ src/
   lib/                  prisma client, auth (JWT/bcrypt), zod schemas, shared types
 prisma/schema.prisma    User + Task models
 e2e/                    Playwright tests
+eval/                   Accuracy eval for the AI quick-add parser
 ```
 
 ## Assessment deliverables
@@ -90,4 +94,4 @@ e2e/                    Playwright tests
 
 ### One current limitation
 
-The AI quick-add has a confirm-before-save step, but no correction *loop* — if Claude misparses a date or priority, there's no structured way to flag that and improve it over time. With one more day: add a small eval set (10–15 sample phrases with expected output) and track parse accuracy, the same way LLM-evaluation work would be scoped at production quality.
+~~The AI quick-add has a confirm-before-save step, but no correction *loop* — if Claude misparses a date or priority, there's no structured way to flag that and improve it over time.~~ **Update:** built this — see `npm run eval` above and `eval/`. It's a small accuracy eval (13 cases, graded on priority/title/dueDate independently), not a full correction loop with user-flagged misparses fed back into a prompt-tuning cycle. That full loop — collecting real misparses in production, growing the case set from them, re-running the eval after every prompt change — is still the honest "with one more day" answer; what exists now is the harness that loop would run on.

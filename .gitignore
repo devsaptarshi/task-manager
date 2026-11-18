@@ -52,3 +52,9 @@ next-env.d.ts
 /playwright-report
 /test-results
 /blob-report
+
+# eval run output (derived; the eval itself — cases.ts, run.ts — is committed)
+/eval/results
+
+# local defense-prep notes, not for the public repo
+/PROJECT_DEEP_DIVE.md
