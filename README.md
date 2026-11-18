@@ -1,0 +1,86 @@
+# Task Manager
+
+A simple task manager: sign up, create and manage your own tasks, and add tasks by typing a plain sentence — an AI quick-add parses it into a structured task.
+
+Built with Next.js (App Router) + TypeScript, PostgreSQL + Prisma, JWT auth with per-user data isolation, and a small Claude-powered "quick add" feature. See [`PLAN.md`](./PLAN.md) for the reasoning behind these choices, and the [deliverables below](#assessment-deliverables) for what was deliberately left out.
+
+## Stack
+
+- **Framework:** Next.js 16 (App Router), TypeScript, Tailwind CSS + shadcn/ui
+- **Data:** PostgreSQL + Prisma ORM
+- **Auth:** Custom JWT in an httpOnly cookie, bcrypt password hashing, every task scoped to its owning user
+- **AI:** Anthropic Claude (`claude-opus-5-5`) with Zod-validated structured output, for the "quick add" feature
+- **Testing:** Vitest (unit) + Playwright (e2e)
+
+## Running it locally
+
+1. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+2. **Set environment variables** — copy `.env` (already present with a working temporary dev database) or create your own:
+
+   ```bash
+   DATABASE_URL="postgresql://..."       # any Postgres connection string
+   JWT_SECRET="..."                      # generate with: openssl rand -base64 32
+   ANTHROPIC_API_KEY=""                  # optional — only needed for the AI quick-add feature
+   ```
+
+   The included `DATABASE_URL` points at a temporary database created with Prisma's `create-db` (good for ~24h). Claim it permanently at the `CLAIM_URL` in `.env`, or swap in your own Postgres connection string and re-run the migration step below.
+
+3. **Run migrations**
+
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+4. **Start the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Visit [http://localhost:3000](http://localhost:3000) — it redirects to `/signup`.
+
+## Testing
+
+```bash
+npm run test        # unit tests (Vitest) — validation schemas, password hashing, JWT round-trip
+npm run test:e2e    # e2e (Playwright) — signup → create task → mark done → log out/in; AI quick-add error path
+```
+
+`test:e2e` starts its own dev server automatically if one isn't already running.
+
+## Project structure
+
+```
+src/
+  app/
+    (api routes)       auth (signup/login/logout/me), tasks CRUD, AI quick-add parse
+    login/, signup/     auth pages
+    tasks/              the app itself (layout guards the route, page loads initial data)
+  components/           UI (task board, task item, forms, quick add)
+  lib/                  prisma client, auth (JWT/bcrypt), zod schemas, shared types
+prisma/schema.prisma    User + Task models
+e2e/                    Playwright tests
+```
+
+## Assessment deliverables
+
+### Three decisions worth knowing about
+
+1. **Next.js/Prisma/Postgres instead of classic MERN.** One deploy target, type-safe DB access end to end, and it matches the production stack this was built to demonstrate — MongoDB's schema flexibility isn't a win for a structured entity like a `Task`.
+2. **Per-user JWT auth with data isolation from day one**, even though the brief didn't require multi-user auth. Every task query is scoped to `userId` — the same access-control discipline that matters far more once an app has more than one user.
+3. **One small, Zod-validated Claude feature instead of a chatbot.** The AI quick-add does one thing (turn a sentence into a structured task) with a typed, verifiable output, rather than a general-purpose assistant — smaller surface area, easy to demo, and still shows real GenAI integration work.
+
+### What was deliberately not implemented
+
+- **Real-time multi-user collaboration (shared task lists).** This is a personal task manager; shared permissions across users is a materially different problem than the one being scoped here.
+- **Drag-and-drop Kanban board.** Polish on top of CRUD, not a signal of engineering judgment — a sortable/filterable list conveys the same information with far less UI risk in a time-boxed build.
+- **Due-date reminders / notifications.** Would need a background job queue and an email/push provider — disproportionate infrastructure for this scope, even though it's the natural next feature.
+
+### One current limitation
+
+The AI quick-add has a confirm-before-save step, but no correction *loop* — if Claude misparses a date or priority, there's no structured way to flag that and improve it over time. With one more day: add a small eval set (10–15 sample phrases with expected output) and track parse accuracy, the same way LLM-evaluation work would be scoped at production quality.
