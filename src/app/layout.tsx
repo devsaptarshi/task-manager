@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Task Manager",
-  description: "A simple, fast task manager with an AI-powered quick add.",
+  title: "Keel — Task management that holds its course",
+  description: "A fast, focused task manager with an AI-powered quick add.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

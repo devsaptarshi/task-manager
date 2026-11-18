@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, hashPassword, sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth";
 import { signupSchema } from "@/lib/validation";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const { ok, retryAfterSeconds } = rateLimit(`signup:${clientIp(request)}`, 5, 60 * 60_000);
+  if (!ok) {
+    return NextResponse.json(
+      { error: "Too many accounts created from this network, try again later" },
+      { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) {

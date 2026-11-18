@@ -10,7 +10,7 @@ test("signup, create a task, mark it done, log out, log back in", async ({ page 
   await page.fill("#password", password);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/\/tasks$/);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.locator('[data-slot="dropdown-menu-trigger"]')).toBeVisible();
 
   // Create a task
   await page.getByRole("button", { name: "New task" }).click();
@@ -25,7 +25,8 @@ test("signup, create a task, mark it done, log out, log back in", async ({ page 
   await expect(taskRow.getByText("Write project README")).toHaveClass(/line-through/);
 
   // Log out, then log back in — the task should still be there, scoped to this user
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.locator('[data-slot="dropdown-menu-trigger"]').click();
+  await page.getByRole("menuitem", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
 
   await page.fill("#email", email);
@@ -35,7 +36,7 @@ test("signup, create a task, mark it done, log out, log back in", async ({ page 
   await expect(page.getByText("Write project README")).toBeVisible();
 });
 
-test("AI quick add fails gracefully without an API key configured", async ({ page }) => {
+test("AI quick add either parses the task or fails gracefully — never crashes", async ({ page }) => {
   const email = `e2e-${Date.now()}-quickadd@example.com`;
   await page.goto("/signup");
   await page.fill("#email", email);
@@ -44,8 +45,13 @@ test("AI quick add fails gracefully without an API key configured", async ({ pag
   await expect(page).toHaveURL(/\/tasks$/);
 
   await page.getByPlaceholder(/Call the dentist/).fill("Call the dentist tomorrow, high priority");
-  await page.getByRole("button", { name: "AI quick add" }).click();
+  await page.getByRole("button", { name: "Parse it" }).click();
 
-  // Without ANTHROPIC_API_KEY set, the route returns a clear error instead of crashing.
-  await expect(page.getByText(/AI quick add is not configured|Couldn't parse/)).toBeVisible();
+  // Whether an AI provider key is configured in this environment or not, the
+  // UI must land in one of two known-good states — a pre-filled confirm
+  // dialog (key present, parse succeeded) or a readable error toast (no key,
+  // or the call failed) — and never an unhandled crash.
+  await expect(
+    page.getByText(/AI quick add is not configured|Couldn't parse|Confirm AI-parsed task/),
+  ).toBeVisible({ timeout: 20_000 });
 });

@@ -54,13 +54,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm border-none shadow-xl shadow-black/5">
       <CardHeader>
-        <CardTitle>{isSignup ? "Create an account" : "Welcome back"}</CardTitle>
+        <CardTitle className="text-2xl">
+          {isSignup ? "Create your account" : "Welcome back"}
+        </CardTitle>
         <CardDescription>
           {isSignup
-            ? "Sign up to start managing your tasks"
-            : "Log in to see your tasks"}
+            ? "Start managing your tasks in under a minute."
+            : "Log in to pick up where you left off."}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
